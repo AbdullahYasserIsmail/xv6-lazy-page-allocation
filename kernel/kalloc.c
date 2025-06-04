@@ -23,6 +23,8 @@ struct {
   struct run *freelist;
 } kmem;
 
+int allocated_pages = 0;
+
 void
 kinit()
 {
@@ -66,6 +68,7 @@ kfree(void *pa)
   r->next = kmem.freelist;
   kmem.freelist = r;
   release(&kmem.lock);
+  allocated_pages--;
 }
 
 
@@ -82,6 +85,7 @@ kalloc(void)
   r = kmem.freelist;
   if(r) {
     kmem.freelist = r->next;
+    allocated_pages++;
   }
   release(&kmem.lock);
 #ifndef LAB_SYSCALL

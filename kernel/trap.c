@@ -33,12 +33,11 @@ trapinithart(void)
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
 //
-void
-usertrap(void)
+void usertrap(void)
 {
   int which_dev = 0;
 
-  if((r_sstatus() & SSTATUS_SPP) != 0)
+  if ((r_sstatus() & SSTATUS_SPP) != 0)
     panic("usertrap: not from user mode");
 
   // send interrupts and exceptions to kerneltrap(),
@@ -46,14 +45,14 @@ usertrap(void)
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
-  
+
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
-  if(r_scause() == 8){
+
+  if (r_scause() == 8) {
     // system call
 
-    if(killed(p))
+    if (killed(p))
       exit(-1);
 
     // sepc points to the ecall instruction,
@@ -65,7 +64,43 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+
+  } else if (r_scause() == 13 || r_scause() == 15) {
+    // Page fault (load or store fault)
+
+    uint64 fault_addr = r_stval();
+
+    // Check fault address validity
+    if (fault_addr >= p->sz) {
+      p->killed = 1;
+      goto end;
+    }
+
+    if (fault_addr < p->ustack) {
+      printf("Access guard page is invalid.\n");
+      p->killed = 1;
+      goto end;
+    }
+
+    // Round down to page boundary
+    uint64 va = PGROUNDDOWN(fault_addr);
+
+    // Allocate physical page
+    char *pa = kalloc();
+    if (pa == 0) {
+      p->killed = 1;
+      goto end;
+    }
+    memset(pa, 0, PGSIZE);
+
+    // Map physical page to user virtual address
+    if (mappages(p->pagetable, va, PGSIZE, (uint64)pa, PTE_W | PTE_R | PTE_X | PTE_U) != 0) {
+      kfree(pa);
+      p->killed = 1;
+      goto end;
+    }
+
+  } else if ((which_dev = devintr()) != 0) {
     // ok
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
@@ -73,11 +108,12 @@ usertrap(void)
     setkilled(p);
   }
 
-  if(killed(p))
+end:
+  if (killed(p))
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if (which_dev == 2)
     yield();
 
   usertrapret();
