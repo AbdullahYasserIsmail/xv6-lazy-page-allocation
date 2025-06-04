@@ -1,57 +1,68 @@
 # Lazy Memory Allocation in xv6
 
-This project is a modified version of [MIT xv6](https://pdos.csail.mit.edu/6.1810/), an instructional re-implementation of Unix Version 6 for RISC-V. The core enhancement here is the implementation of **lazy memory allocation**—physical memory is allocated for user processes only when a page is first accessed, rather than when it is initially requested.
+This project is a modified version of [MIT xv6](https://pdos.csail.mit.edu/6.1810/), an instructional re-implementation of Unix Version 6 for RISC-V. The core enhancement here is the implementation of **lazy memory allocation** — physical memory is allocated for user processes only when a page is first accessed, rather than when it is initially requested.
 
-## What is xv6?
+---
 
-xv6 is a simple, Unix-like teaching operating system developed at MIT for the RISC-V architecture. It is used primarily for educational purposes in operating system courses and as a reference for OS design.
+## 🐚 What is xv6?
 
-## About This Project
+**xv6** is a simple, Unix-like teaching operating system developed at MIT for the RISC-V architecture. It is used primarily for educational purposes in operating system courses and as a reference for OS design.
+
+---
+
+## 📦 About This Project
 
 This repository demonstrates an operating systems memory management technique called **lazy (or deferred) page allocation**. Instead of allocating all requested user memory up front, the kernel allocates pages only when they are actually accessed by the process (typically via a page fault).
 
-## Key Features and Implementation
+---
+
+## 🔧 Key Features and Implementation
 
 ### 1. Modified `sbrk()` System Call
-
 - `sbrk()` now only adjusts the declared size of a process’s virtual address space (`p->sz`).
-- No physical memory is allocated during `sbrk()`, except when shrinking the memory region (where memory is freed if needed).
+- No physical memory is allocated during `sbrk()`, except when shrinking the memory region (memory is freed if needed).
 
 ### 2. On-Demand Page Allocation
-
 - When a user process accesses a virtual page for the first time and triggers a page fault, the trap handler (`usertrap()` in `trap.c`) allocates a physical page, zeroes it, and maps it into the process’s page table.
 - If the faulting address is outside the process's allocated (valid) space, the process is killed.
 
 ### 3. Safe Deallocation and Copying
-
 - Deallocation (`uvmunmap`) safely skips unmapped (never-faulted) pages.
 - When processes are forked, only mapped pages are copied to the child (`uvmcopy`). Unallocated pages are lazily faulted in by the child if needed.
-- The kernel is updated to handle copying to unmapped user pages gracefully in `copyout`, while `copyin` and `copyinstr` maintain vanilla xv6 behavior for safety.
+- The kernel handles copying to unmapped user pages gracefully in `copyout`, while `copyin` and `copyinstr` maintain vanilla xv6 behavior for safety.
 
 ### 4. Utilities: Page Table Printer and Testing
+- A `vmprint` function prints the process’s page table, aiding debugging of lazy mapping.
+- The `lazytest` user program tests lazy allocation functionality: it allocates memory, sparsely accesses it, and demonstrates page-by-page allocation.
 
-- A `vmprint` function is provided to print the process’s page table, aiding in debugging of page table structures and lazy mapping.
-- The included `lazytest` user program helps test lazy allocation functionality; it allocates memory, sparsely accesses it, and demonstrates page-by-page allocation.
+---
 
-## How to Build and Run
+## 🚀 How to Build and Run
 
 1. Install a RISC-V "newlib" toolchain and QEMU (see MIT xv6 instructions).
 2. Clone this repository and run:
     ```sh
     make qemu
     ```
-3. To observe lazy allocation, run the provided `lazytest` user program in the xv6 shell.
+3. In the xv6 shell, run the `lazytest` program to observe lazy allocation in action.
 
-## Why Lazy Allocation?
+---
 
-Lazy (deferred) page allocation enhances efficiency by preventing allocation of pages that may never be used. This is ideal for programs that allocate large buffers or heaps but only use a small portion, thus saving memory and reducing startup costs.
+## ❓ Why Lazy Allocation?
 
-## References
+Lazy (deferred) page allocation improves memory efficiency by avoiding allocation of unused pages. This is ideal for programs that reserve large buffers or heaps but only use a small portion — saving memory and reducing startup time.
+
+---
+
+## 📚 References
 
 - [xv6 official repository](https://github.com/mit-pdos/xv6-riscv)
 - [MIT 6.1810 course](https://pdos.csail.mit.edu/6.1810/)
-- [Lazy Lab Guide](https://xiayingp.gitbook.io/build_a_os/labs/lab-4-lazy) – The implementation follows the tasks and recommendations in this guide.
+- [Lazy Lab Guide](https://xiayingp.gitbook.io/build_a_os/labs/lab-4-lazy) — The implementation follows the tasks and recommendations in this guide.
 
-## Credits
+---
 
-xv6 is developed by the MIT PDOS group. This fork adds core lazy page allocation support and related utilities for instructional and research purposes.
+## 🙌 Credits
+
+xv6 is developed by the [MIT PDOS](https://pdos.csail.mit.edu/) group.  
+This fork adds core lazy page allocation support and related utilities for instructional and research purposes.
